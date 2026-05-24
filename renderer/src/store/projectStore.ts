@@ -1,5 +1,7 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
+  AnimationPreset,
   AnimationPresetKind,
   CaptionGroup,
   Output,
@@ -9,14 +11,21 @@ import type {
   Word,
 } from '@shared/types';
 
-const GROUP_GAP_THRESHOLD_SEC = 0.4;
-const GROUP_MAX_WORDS = 3;
+export type ChunkingConfig = {
+  maxWords: number;
+  gapSec: number;
+};
+
+const DEFAULT_CHUNKING: ChunkingConfig = {
+  maxWords: 6,
+  gapSec: 0.6,
+};
 
 function uid(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function groupWords(words: Word[]): CaptionGroup[] {
+function groupWords(words: Word[], cfg: ChunkingConfig): CaptionGroup[] {
   if (words.length === 0) return [];
   const groups: CaptionGroup[] = [];
   let current: Word[] = [];
@@ -39,7 +48,7 @@ function groupWords(words: Word[]): CaptionGroup[] {
     }
     const prev = current[current.length - 1];
     const gap = w.startSec - prev.endSec;
-    if (gap >= GROUP_GAP_THRESHOLD_SEC || current.length >= GROUP_MAX_WORDS) {
+    if (gap >= cfg.gapSec || current.length >= cfg.maxWords) {
       flush();
     }
     current.push(w);
@@ -96,6 +105,7 @@ export type ProjectState = {
   previewPath: string | null;
   previewPct: number | null;
   transcribe: TranscribeStatus;
+  chunking: ChunkingConfig;
   setTranscribeStatus: (patch: Partial<TranscribeStatus>) => void;
   setPreviewPath: (path: string | null) => void;
   setPreviewPct: (pct: number | null) => void;
@@ -113,6 +123,7 @@ export type ProjectState = {
   ) => void;
   setPresetParams: (params: Record<string, number | string>) => void;
   setOutput: (patch: Partial<Output>) => void;
+  setChunking: (patch: Partial<ChunkingConfig>) => void;
   reset: () => void;
 };
 
@@ -122,12 +133,24 @@ const DEFAULT_TRANSCRIBE: TranscribeStatus = {
   message: null,
 };
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
+type PersistedSettings = {
+  project: {
+    style: StyleConfig;
+    preset: AnimationPreset;
+    output: Output;
+  };
+  chunking: ChunkingConfig;
+};
+
+export const useProjectStore = create<ProjectState>()(
+  persist(
+    (set, get) => ({
   project: DEFAULT_PROJECT,
   hasSource: false,
   previewPath: null,
   previewPct: null,
   transcribe: DEFAULT_TRANSCRIBE,
+  chunking: DEFAULT_CHUNKING,
 
   setTranscribeStatus: (patch) =>
     set((state) => ({ transcribe: { ...state.transcribe, ...patch } })),
@@ -151,33 +174,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     })),
 
   setWords: (words) => {
-    const captions = groupWords(words);
     set((state) => ({
       project: {
         ...state.project,
         transcript: { words },
-        captions,
+        captions: groupWords(words, state.chunking),
       },
     }));
   },
 
   regroupCaptions: () => {
-    const { project } = get();
-    const captions = groupWords(project.transcript.words);
+    const { project, chunking } = get();
+    const captions = groupWords(project.transcript.words, chunking);
     set({ project: { ...project, captions } });
   },
 
   updateWord: (id, patch) => {
-    const { project } = get();
+    const { project, chunking } = get();
     const words = project.transcript.words.map((w) =>
       w.id === id ? { ...w, ...patch } : w,
     );
-    const captions = groupWords(words);
+    const captions = groupWords(words, chunking);
     set({ project: { ...project, transcript: { words }, captions } });
   },
 
   splitWord: (id, atIndex) => {
-    const { project } = get();
+    const { project, chunking } = get();
     const words = project.transcript.words;
     const idx = words.findIndex((w) => w.id === id);
     if (idx === -1) return;
@@ -193,13 +215,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       project: {
         ...project,
         transcript: { words: next },
-        captions: groupWords(next),
+        captions: groupWords(next, chunking),
       },
     });
   },
 
   mergeWords: (id1, id2) => {
-    const { project } = get();
+    const { project, chunking } = get();
     const words = project.transcript.words;
     const i1 = words.findIndex((w) => w.id === id1);
     const i2 = words.findIndex((w) => w.id === id2);
@@ -218,13 +240,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       project: {
         ...project,
         transcript: { words: next },
-        captions: groupWords(next),
+        captions: groupWords(next, chunking),
       },
     });
   },
 
   nudgeWordTiming: (id, deltaStart, deltaEnd) => {
-    const { project } = get();
+    const { project, chunking } = get();
     const words = project.transcript.words.map((w) => {
       if (w.id !== id) return w;
       const startSec = Math.max(0, w.startSec + deltaStart);
@@ -235,7 +257,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       project: {
         ...project,
         transcript: { words },
-        captions: groupWords(words),
+        captions: groupWords(words, chunking),
       },
     });
   },
@@ -285,6 +307,21 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ project: { ...project, output: { ...project.output, ...patch } } });
   },
 
+  setChunking: (patch) => {
+    const { project, chunking } = get();
+    const next: ChunkingConfig = {
+      maxWords: Math.max(1, Math.round(patch.maxWords ?? chunking.maxWords)),
+      gapSec: Math.max(0.05, patch.gapSec ?? chunking.gapSec),
+    };
+    set({
+      chunking: next,
+      project: {
+        ...project,
+        captions: groupWords(project.transcript.words, next),
+      },
+    });
+  },
+
   reset: () =>
     set({
       project: DEFAULT_PROJECT,
@@ -293,7 +330,37 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       previewPct: null,
       transcribe: DEFAULT_TRANSCRIBE,
     }),
-}));
+    }),
+    {
+      name: 'subgen-settings-v1',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state): PersistedSettings => ({
+        project: {
+          style: state.project.style,
+          preset: state.project.preset,
+          output: state.project.output,
+        },
+        chunking: state.chunking,
+      }),
+      merge: (persisted, current) => {
+        const p = persisted as Partial<PersistedSettings> | undefined;
+        if (!p) return current;
+        return {
+          ...current,
+          project: p.project
+            ? {
+                ...current.project,
+                style: { ...current.project.style, ...p.project.style },
+                preset: p.project.preset ?? current.project.preset,
+                output: { ...current.project.output, ...p.project.output },
+              }
+            : current.project,
+          chunking: { ...current.chunking, ...p.chunking },
+        };
+      },
+    },
+  ),
+);
 
 export function defaultPresetParams(
   kind: AnimationPresetKind,

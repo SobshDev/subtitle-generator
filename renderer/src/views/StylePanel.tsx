@@ -1,9 +1,37 @@
+import { useEffect, useMemo, useState } from 'react';
 import { BUNDLED_FONTS } from '@shared/types';
 import { useProjectStore } from '../store/projectStore';
+import { ipc } from '../ipc/client';
 
 export function StylePanel(): JSX.Element {
   const style = useProjectStore((s) => s.project.style);
   const setStyle = useProjectStore((s) => s.setStyle);
+  const chunking = useProjectStore((s) => s.chunking);
+  const setChunking = useProjectStore((s) => s.setChunking);
+
+  const [systemFonts, setSystemFonts] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    ipc
+      .listSystemFonts()
+      .then(({ fonts }) => {
+        if (!cancelled) setSystemFonts(fonts);
+      })
+      .catch((err) => {
+        console.error('[renderer] listSystemFonts failed', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const allFonts = useMemo(() => {
+    const set = new Set<string>(BUNDLED_FONTS);
+    for (const f of systemFonts) set.add(f);
+    if (style.fontFamily) set.add(style.fontFamily);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [systemFonts, style.fontFamily]);
 
   const shadowEnabled = !!style.shadow;
 
@@ -19,8 +47,8 @@ export function StylePanel(): JSX.Element {
           onChange={(e) => setStyle({ fontFamily: e.target.value })}
           className="w-full rounded bg-neutral-800 px-2 py-1 text-sm text-neutral-100 outline-none focus:ring-1 focus:ring-sky-500"
         >
-          {BUNDLED_FONTS.map((f) => (
-            <option key={f} value={f}>
+          {allFonts.map((f) => (
+            <option key={f} value={f} style={{ fontFamily: `"${f}", sans-serif` }}>
               {f}
             </option>
           ))}
@@ -123,6 +151,31 @@ export function StylePanel(): JSX.Element {
         step={0.05}
         onChange={(v) => setStyle({ lineHeight: v })}
       />
+
+      <div className="border-t border-neutral-800 pt-3">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+          Chunking
+        </h3>
+        <div className="space-y-3">
+          <SliderField
+            label="Max words per caption"
+            value={chunking.maxWords}
+            min={1}
+            max={15}
+            step={1}
+            onChange={(v) => setChunking({ maxWords: v })}
+          />
+          <SliderField
+            label="Gap threshold"
+            value={chunking.gapSec}
+            min={0.1}
+            max={2}
+            step={0.05}
+            onChange={(v) => setChunking({ gapSec: v })}
+            unit="s"
+          />
+        </div>
+      </div>
 
       <div className="border-t border-neutral-800 pt-3">
         <label className="mb-2 flex cursor-pointer items-center justify-between text-xs uppercase tracking-wider text-neutral-400">

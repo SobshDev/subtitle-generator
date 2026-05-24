@@ -55,4 +55,6 @@ export const ipc = {
     api().dialogChooseOpenPath(req),
 
   getPathForFile: (file: File) => api().getPathForFile(file),
+
+  listSystemFonts: () => api().fontsListSystem(),
 };

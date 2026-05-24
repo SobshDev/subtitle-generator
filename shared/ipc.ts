@@ -15,6 +15,7 @@ export enum IpcChannel {
   FirstRunProgress = 'firstRun:progress',
   SecretsSetGroqKey = 'secrets:setGroqKey',
   SecretsHasGroqKey = 'secrets:hasGroqKey',
+  FontsListSystem = 'fonts:listSystem',
 }
 
 export type MediaProbe = {
@@ -98,6 +99,11 @@ export type SecretsHasGroqKey = {
   Response: { hasKey: boolean };
 };
 
+export type FontsListSystem = {
+  Request: never;
+  Response: { fonts: string[] };
+};
+
 export type IpcChannelMap = {
   [IpcChannel.MediaProbe]: MediaProbe;
   [IpcChannel.MediaEnsurePreview]: MediaEnsurePreview;
@@ -113,6 +119,7 @@ export type IpcChannelMap = {
   [IpcChannel.FirstRunProgress]: FirstRunProgress;
   [IpcChannel.SecretsSetGroqKey]: SecretsSetGroqKey;
   [IpcChannel.SecretsHasGroqKey]: SecretsHasGroqKey;
+  [IpcChannel.FontsListSystem]: FontsListSystem;
 };
 
 export type RendererApi = {
@@ -155,6 +162,7 @@ export type RendererApi = {
     req: SecretsSetGroqKey['Request'],
   ) => Promise<SecretsSetGroqKey['Response']>;
   secretsHasGroqKey: () => Promise<SecretsHasGroqKey['Response']>;
+  fontsListSystem: () => Promise<FontsListSystem['Response']>;
 };
 
 declare global {

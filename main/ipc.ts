@@ -2,6 +2,7 @@ import { BrowserWindow, dialog, ipcMain, webContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import keytar from 'keytar';
+import { getFonts } from 'font-list';
 import {
   IpcChannel,
   type DialogChooseOpenPath,
@@ -9,6 +10,7 @@ import {
   type ExportDone,
   type ExportProgress,
   type ExportStart,
+  type FontsListSystem,
   type MediaEnsurePreview,
   type MediaEnsurePreviewProgress,
   type MediaProbe,
@@ -131,6 +133,17 @@ export function registerIpcHandlers(): void {
         KEYTAR_ACCOUNT_GROQ,
       );
       return { hasKey: Boolean(v) };
+    },
+  );
+
+  ipcMain.handle(
+    IpcChannel.FontsListSystem,
+    async (): Promise<FontsListSystem['Response']> => {
+      const raw = await getFonts({ disableQuoting: true });
+      const cleaned = Array.from(
+        new Set(raw.map((f) => f.replace(/^"(.*)"$/, '$1').trim()).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b));
+      return { fonts: cleaned };
     },
   );
 

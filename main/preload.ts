@@ -57,6 +57,7 @@ const api: RendererApi = {
     ipcRenderer.invoke(IpcChannel.SecretsSetGroqKey, req),
   secretsHasGroqKey: () =>
     ipcRenderer.invoke(IpcChannel.SecretsHasGroqKey),
+  fontsListSystem: () => ipcRenderer.invoke(IpcChannel.FontsListSystem),
 };
 
 contextBridge.exposeInMainWorld('api', api);

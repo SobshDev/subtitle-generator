@@ -78,6 +78,7 @@ export const BUNDLED_FONTS = [
   'Bebas Neue',
   'Roboto',
   'Montserrat',
+  'Graphik Compact',
 ] as const;
 
 export type BundledFont = (typeof BUNDLED_FONTS)[number];

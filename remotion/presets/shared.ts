@@ -36,11 +36,7 @@ export const useGroupLayout = (style: StyleConfig): Layout => {
     position: 'absolute',
     left: leftPx,
     top: topPx,
-    maxWidth: style.maxWidthPx,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: style.maxWidthPx,
   };
 
   if (anchor === 'center') {
@@ -58,7 +54,7 @@ export const useGroupLayout = (style: StyleConfig): Layout => {
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'baseline',
-    maxWidth: style.maxWidthPx,
+    width: '100%',
   };
 
   return { container, line };
