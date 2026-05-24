@@ -1,0 +1,49 @@
+{
+  "name": "subtitle-generator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone animated subtitle overlay generator (ProRes 4444 with alpha).",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "remotion:preview": "remotion preview remotion/Root.tsx",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.220",
+    "@remotion/google-fonts": "^4.0.220",
+    "@remotion/player": "^4.0.220",
+    "@remotion/renderer": "^4.0.220",
+    "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0",
+    "keytar": "^7.9.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.220",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@remotion/cli": "^4.0.465",
+    "@types/ffmpeg-static": "^3.0.3",
+    "@types/ffprobe-static": "^2.0.3",
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "electron-vite": "^2.3.0",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "typescript": "^5.4.5",
+    "vite": "^5.4.0",
+    "vitest": "^4.1.7"
+  }
+}

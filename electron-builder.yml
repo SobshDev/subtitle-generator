@@ -1,0 +1,34 @@
+appId: dev.sobsh.subtitle-generator
+productName: Subtitle Generator
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - remotion/**
+  - package.json
+asarUnpack:
+  - remotion/**
+  - node_modules/@remotion/**
+  - node_modules/ffmpeg-static/**
+  - node_modules/ffprobe-static/**
+  - node_modules/@esbuild/**
+  - node_modules/esbuild/**
+  - node_modules/@rspack/**
+  - node_modules/@swc/**
+  - "**/*.node"
+mac:
+  category: public.app-category.video
+  target:
+    - dmg
+    - zip
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+win:
+  target:
+    - nsis
+linux:
+  target:
+    - AppImage
